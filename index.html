@@ -6,70 +6,113 @@
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-alpha/css/bootstrap.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-beta1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.4.5/socket.io.min.js"></script>
+
+    <style type="text/css">
+        .container {
+            padding: 0;
+            padding-top: 2em;
+            width: 640px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 1em;
+        }
+
+        #player-container {
+            width: 640px;
+            margin: 0 auto;
+        }
+
+        .url-input {
+            width: 70% !important;
+        }
+
+        .bims-button {
+            width: 29%;
+        }
+    </style>
 </head>
 <body>
 <!--<iframe width="560" height="315" src="https://www.youtube.com/embed/KcbSnuXCuU8" frameborder="0" allowfullscreen></iframe>-->
 
 <!-- 1. The <iframe> (and video player) will replace this <div> tag. -->
-<div id="player"></div>
+<div class="container">
+    <h1 class='header'>Hackathon RADIO</h1>
+    <div id='player-container'>
+        <div id="player"></div>
+    </div>
+    <script>
+        var socket = io.connect('http://18a65c3d.ngrok.com');
 
-<script>
-    // 2. This code loads the IFrame Player API code asynchronously.
-    var tag = document.createElement('script');
+        // 2. This code loads the IFrame Player API code asynchronously.
+        var tag = document.createElement('script');
 
-    tag.src = "https://www.youtube.com/iframe_api";
-    var firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
-    // 3. This function creates an <iframe> (and YouTube player)
-    //    after the API code downloads.
-    var player;
-    function onYouTubeIframeAPIReady() {
-        player = new YT.Player('player', {
-            height: '390',
-            width: '640',
-            videoId: 'KcbSnuXCuU8',
-            events: {
-                'onReady': onPlayerReady,
-                'onStateChange': onPlayerStateChange
+        // 3. This function creates an <iframe> (and YouTube player)
+        //    after the API code downloads.
+        var player;
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('player', {
+                height: '390',
+                width: '640',
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange
+                }
+            });
+        }
+
+        // 4. The API will call this function when the video player is ready.
+        function onPlayerReady(event) {
+            event.target.playVideo();
+        }
+
+        // 5. The API calls this function when the player's state changes.
+        //    The function indicates that when playing a video (state=1),
+        //    the player should play for six seconds and then stop.
+        var done = false;
+        function onPlayerStateChange(event) {
+            if (event.data == YT.PlayerState.PLAYING && !done) {
+                setTimeout(stopVideo, 6000);
+                done = true;
+            }
+        }
+        function stopVideo() {
+            player.stopVideo();
+        }
+
+        socket.on('new-url', function (data) {
+            console.log('new-url', data.url);
+
+            switch (data.type) {
+                case 'youtube':
+                    player.loadVideoById(data.url);
+                    break;
             }
         });
-    }
 
-    // 4. The API will call this function when the video player is ready.
-    function onPlayerReady(event) {
-        event.target.playVideo();
-    }
+        $(function () {
+            var urlInput = $("#url-input");
+            var bims = $('#bims');
 
-    // 5. The API calls this function when the player's state changes.
-    //    The function indicates that when playing a video (state=1),
-    //    the player should play for six seconds and then stop.
-    var done = false;
-    function onPlayerStateChange(event) {
-        if (event.data == YT.PlayerState.PLAYING && !done) {
-            setTimeout(stopVideo, 6000);
-            done = true;
-        }
-    }
-    function stopVideo() {
-        player.stopVideo();
-    }
-
-    $(function () {
-        var urlInput = $("#url-input");
-        var bims = $('#bims');
-
-        bims.on('click', function(){
-            var url = urlInput.val();
-            // TODO: check url
-            // TODO: socket.emit('new-url', url)
-            player.loadVideoById(url);
+            bims.on('click', function () {
+                var url = urlInput.val();
+                // TODO: check url
+                socket.emit('new-url', url)
+            });
         });
-    });
-</script>
-
-<input type="text" class="form-control" id="url-input">
-<button class='btn btn-success' id='bims'>BIMS MIR DAS</button>
+    </script>
+    <br>
+    <form class="form-inline">
+        <input type="text" class="form-control url-input" id="url-input">
+        <button class='btn btn-success bims-button' id='bims'>BIMS MIR DAS</button>
+    </form>
+</div>
 
 </body>
 </html>
